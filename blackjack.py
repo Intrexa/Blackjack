@@ -100,8 +100,6 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
             continue
 
 # Evaluate game state
-# TODO: This function is still overloaded, should not be displaying state as well
-# TODO: Refactor display to be seperate function
 # TODO: game_state should be a class
 def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> dict[str,any]:
         """
@@ -153,6 +151,10 @@ def player_hits(player_score, player_card, dealer_score, dealer_card, deck):
     #if player busts over 21, player lost and new game starts without allowing dealer to select cards.
     if player_score > 21:
         display_cards_and_maybe_start_over(player_card, player_score, dealer_card, dealer_score, "Dealer won.", deck)
+        # BUG: The above function will call "enter_more()", because there is a win message
+        # Now, we call it again. The below will never actually be called, the game is restarting from the above
+        # This is why we don't have side effects in code, it makes it really hard to spot these bugs
+        # When I renamed your old display function, it made it really obvious there could be an issue here.
         enter_more(deck)
     #Dealers turn
     # NOTE: In casino play, dealers don't take turns until the players are done
