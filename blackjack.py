@@ -44,20 +44,11 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
         # if not first round, add up cards from last selections
         player_score = sum(card_value(card) for card in player_card)
         dealer_score = sum(card_value(card) for card in dealer_card)
-        #evaluate cards for win/lose or tie, Some automation is here - may seem line error during play but NOT.
-        if dealer_score > 21:
-            display_cards(player_card, player_score, dealer_card, dealer_score, "-*PLAYER WON!*-", False, deck)
-        elif dealer_score == player_score and player_score >= 17:
-            display_cards(player_card, player_score, dealer_card, dealer_score, "", True, deck)
-        elif dealer_score in range(17, 21+1) and player_score in range(17, 21+1) and player_score > dealer_score:
-            display_cards(player_card, player_score, dealer_card, dealer_score, "-*PLAYER WON!*-", False, deck)
-        elif dealer_score in range(17, 21+1) and player_score in range(18, 21+1) and player_score < dealer_score:
-            display_cards(player_card, player_score, dealer_card, dealer_score, "Dealer won", False, deck)
-        elif dealer_score < 17 and player_score in range(20, 21+1):
-            player_stays(player_score, dealer_score, player_card, dealer_card, True, deck)
-        else:
-            display_cards(player_card, player_score, dealer_card, dealer_score, "", False, deck)
-            #Player decision time
+
+        # We don't really need this, because of so many exit points in the functions
+        # But we will end up making use of this
+        is_game_over = evaluate_state(player_card,player_score,dealer_card,dealer_score,deck)
+        if not is_game_over:
             choice = input("Another card sir/madame? 'h' to Hit it, 'p' to quit it: \n").lower()
         #If player hits, go to player_hits function
         if choice == "h":
@@ -65,14 +56,68 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
         #If player stays, go to player_stays function
         elif choice == "p":
             player_stays(player_score, dealer_score, player_card, dealer_card, True, deck)
-        else: #self esplanatory
+        else: #self explanatory
             print("Invalid choice. Please try again.")
             continue
+
+# Evaluate game state for game over
+# TODO: This function is still overloaded, should not be displaying state as well
+# TODO: Refactor display to be seperate function
+def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> bool:
+        """
+        Evaluate Game State
+
+        Returns:
+            bool: Is the game over
+        """
+        is_game_over = False
+        #evaluate cards for win/lose or tie, Some automation is here - may seem line error during play but NOT.
+
+        # arguments to pass to display_cards()
+        # These will get set after game state is evaluated
+        # TODO: Game should be a class to prevent so many args being passed around
+        args = {
+            "player_cards":player_cards,
+            "player_score":player_score,
+            "dealer_cards":dealer_cards,
+            "dealer_score":dealer_score,
+            "win_message":None, #No default win message
+            "tie":False,
+            "deck":deck
+        }
+        if dealer_score > 21:
+            args["win_message"] = "-*PLAYER WON!*-"
+        elif dealer_score == player_score and player_score >= 17:
+            args["tie"] = True
+        elif dealer_score in range(17, 21+1) and player_score in range(17, 21+1) and player_score > dealer_score:
+            args["win_message"] = "-*PLAYER WON!*-"
+        elif dealer_score in range(17, 21+1) and player_score in range(18, 21+1) and player_score < dealer_score:
+            args["win_message"] = "Dealer won"
+        elif dealer_score < 17 and player_score in range(20, 21+1):
+            # The below was super tricky, I didn't notice this was a seperate function at first
+            # Long lists of conditions are hard enough, but you kind of snuck a different function in the middle
+            # This makes it hard to realize what's happening
+            # Try to either not do this, or make it obvious
+            # It's also really sneaky that a new game can start in this function
+            player_stays(player_score, dealer_score, player_cards, dealer_cards, True, deck)
+        else:
+            # Game not over, still players turn
+            pass # Really we could move this clause, pass for now
+        
+        # dictionary unpacking as arguments to the function
+        display_cards(**args)
+        
+        # If no one has a win message, and there's no tie, game on
+        is_game_over = (args["win_message"] is not None) or (args["tie"])
+        return is_game_over
+
+
 #get player card when 'hit'
 def player_hits(player_score, player_card, dealer_score, dealer_card, deck):
     new_card = deck.pop()
     player_card.append(new_card)
     #if player has more than 10 and receives an ace, turn it into '1' and add 1 to score
+    # BUG: Previous aces can also count as a 1. If you get dealt an ace, then later bust, you didn't bust
     if player_score > 10 and new_card[0] == "Ace":
         player_card.pop()
         player_card.append(one)
@@ -86,7 +131,10 @@ def player_hits(player_score, player_card, dealer_score, dealer_card, deck):
         display_cards(player_card, player_score, dealer_card, dealer_score, "Dealer won.", False, deck)
         enter_more(deck)
     #Dealers turn
+    # NOTE: In casino play, dealers don't take turns until the players are done
+    # We are going to refactor this further
     player_stays(player_score, dealer_score, player_card, dealer_card, False, deck)
+
 #Dealer/computer card selection
 def player_stays(ps, ds, pc, dc, trigger, deck):
     while ds < 17:
@@ -120,21 +168,27 @@ def player_stays(ps, ds, pc, dc, trigger, deck):
         else:
             continue
         enter_more(deck)
+
 #display scoreboard.
-def display_cards(pc, ps, dc, ds, win, tie, d_count):
+def display_cards(player_cards, player_score, dealer_cards, dealer_score, win_message, tie, deck):
     if tie:
-        print(f"Players cards: {pc}\n")
-        print(f"Dealers cards: {dc}")
-        print(f"\n\n ---*** Your scores are: Dealer: {ds} --***-- Player: {ps} -*You tied*-  ***---\n")
-        enter_more(d_count)
+        print(f"Players cards: {player_cards}\n")
+        print(f"Dealers cards: {dealer_cards}")
+        print(f"\n\n ---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} -*You tied*-  ***---\n")
+        enter_more(deck)
 
     else:
-        print(f"Players cards: {pc}\n")
-        print(f"Dealers cards: {dc}")
-        print(f"\n---*** Your scores are: Dealer: {ds} --***-- Player: {ps} {win}  ***---\n")
-    if win != "":
-        enter_more(d_count)
+        print(f"Players cards: {player_cards}\n")
+        print(f"Dealers cards: {dealer_cards}")
+        print(f"\n---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} {win_message}  ***---\n")
+    if win_message:
+        enter_more(deck)
+
 #Start new round
+# BUG: This should be a loop, not recursion
+# This can overflow the stack + crash if player plays enough rounds
+# This function has way too many entry points
+# When debugging/troubleshooting, it's hard to tell when/where/why it's getting called
 def enter_more(d_count):
     go_again = input("0 to quit or Enter to start ") # Keep as string, avoids TypeErrors.
     if go_again == "0": # anything other than "0" will return False, no errors.
