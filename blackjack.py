@@ -7,13 +7,48 @@ dealer_card = []
 choice = ""
 one = ('1', 'ace')
 
-def card_value(card):
+def card_value(card) -> int:
+    """
+    Evaluates a cards value. It treats 'Ace' as 1.
+    Any code that has special rules for value of ace
+    should handle its own edge cases
+
+    Returns:
+        int: The value of the card
+    """
+    # Style choice for returns
+    # I prefer not to do elif when we are just returning values
     if card[0] in ['Jack', 'Queen', 'King']:
         return 10
-    elif card[0] == 'Ace':
-        return 11
-    else:
-        return int(card[0])
+    if card[0] == 'Ace':
+        return 1
+    
+    return int(card[0])
+
+def evaluate_hand(cards: list) -> int:
+    """
+    Evaluate a hand for score
+
+    Returns:
+        int: Score of the hand
+    """
+
+    # We are going to evaluate the hand assuming the aces are 1.
+    # Then, we can determine if it's safe to promote an ace
+    #  to its full value of 11.
+    # Yes, I'm traversing the deck twice and then aces a third time
+    #   when a loop and math could do it in one pass. Sue me.
+    hand_value = sum([card_value(card) for card in cards])
+    ace_count = len([card for card in cards if card[0] == 'Ace'])
+        
+    # See how many aces we can promote from value of 1 to 11
+    while ace_count > 0 and (hand_value + 10) <= 21:
+        ace_count -= 1
+        hand_value += 10
+    
+    return hand_value
+
+
 
 def main(player_score, player_card, dealer_score, dealer_card, deck):
     card_list = []
@@ -32,21 +67,12 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
         if player_score == 0:
             player_card = [deck.pop(), deck.pop()]
             dealer_card = [deck.pop(), deck.pop()]
-            player_score = sum(card_value(card) for card in player_card)
-            dealer_score = sum(card_value(card) for card in dealer_card)
-            # If 2 aces are dealt convert one to "1"
-            if dealer_score == 22:
-                dealer_card.pop()
-                dealer_card.append(one)
-            if player_score == 22:
-                player_card.pop()
-                player_card.append(one)
-        # if not first round, add up cards from last selections
-        player_score = sum(card_value(card) for card in player_card)
-        dealer_score = sum(card_value(card) for card in dealer_card)
+        
+        player_score = evaluate_hand(player_card)
+        dealer_score = evaluate_hand(dealer_card)
 
-        # We don't really need this, because of so many exit points in the functions
-        # But we will end up making use of this
+        # We don't really need is_game_over, because of so many exit points in the functions
+        # But we will end up making use of is_game_over
         is_game_over = evaluate_state(player_card,player_score,dealer_card,dealer_score,deck)
         if not is_game_over:
             choice = input("Another card sir/madame? 'h' to Hit it, 'p' to quit it: \n").lower()
@@ -81,6 +107,10 @@ def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> 
             "player_score":player_score,
             "dealer_cards":dealer_cards,
             "dealer_score":dealer_score,
+            # BUG: I introduced this bug
+            # display isn't playing nice with "None"
+            # Exaple:
+            # ---*** Your scores are: Dealer: 9 --***-- Player: 9 None  ***---
             "win_message":None, #No default win message
             "deck":deck
         }
@@ -115,17 +145,8 @@ def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> 
 def player_hits(player_score, player_card, dealer_score, dealer_card, deck):
     new_card = deck.pop()
     player_card.append(new_card)
-    #if player has more than 10 and receives an ace, turn it into '1' and add 1 to score
-    # BUG: Previous aces can also count as a 1. If you get dealt an ace, then later bust, you didn't bust
-    if player_score > 10 and new_card[0] == "Ace":
-        player_card.pop()
-        player_card.append(one)
-        player_score = sum(int(one[0]) for card in player_card)
-        #Dealers turn
-        player_stays(player_score, dealer_score, player_card, dealer_card, False, deck)
-    else:   #Add regular card to total score
-        player_score = sum(card_value(card) for card in player_card)
-    #if player busts over 21, player losed and new game starts without allowing dealer to select cards.
+    player_score = evaluate_hand(player_card)
+    #if player busts over 21, player lost and new game starts without allowing dealer to select cards.
     if player_score > 21:
         display_cards(player_card, player_score, dealer_card, dealer_score, "Dealer won.", deck)
         enter_more(deck)
@@ -139,15 +160,15 @@ def player_stays(ps, ds, pc, dc, trigger, deck):
     while ds < 17:
         new_card = deck.pop()
         dc.append(new_card)
-        #if dealer receives ace when already has 11 or more points, turn into '1' and add 1 to score.
-        if ds > 10 and new_card[0] == "Ace":
-            dc.pop()
-            dc.append(one)
-            ds = sum(int(one[0]) for card in dc)
-        #add regular card to score
-        else:
-            ds = sum(card_value(card) for card in dc)
+        ds = evaluate_hand(dc)
         #when trigger is True, this means Player is passed and computer is free to pull cards sequentially til finished
+        # TODO: Remove recursion
+        # main() is a bit overloaded, and the below is confusing
+        # main really is "Take a turn"
+        # So it should be called "take_turn"
+        # when you have a line of code like "main(0, [], 0, [], [])"
+        # You're creating a new game, then telling main() to take a turn in that new game
+        # This should be split out into seperate functions and made more clear
         if trigger == False and ds < 22:
             main(ps, pc, ds, dc, deck)
     #when Player is finished and computer is finished evaluate for win, lose or tie, invoke scoreboard display
