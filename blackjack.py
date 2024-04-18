@@ -82,13 +82,12 @@ def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> 
             "dealer_cards":dealer_cards,
             "dealer_score":dealer_score,
             "win_message":None, #No default win message
-            "tie":False,
             "deck":deck
         }
         if dealer_score > 21:
             args["win_message"] = "-*PLAYER WON!*-"
         elif dealer_score == player_score and player_score >= 17:
-            args["tie"] = True
+            args["win_message"] = "-*You tied*-"
         elif dealer_score in range(17, 21+1) and player_score in range(17, 21+1) and player_score > dealer_score:
             args["win_message"] = "-*PLAYER WON!*-"
         elif dealer_score in range(17, 21+1) and player_score in range(18, 21+1) and player_score < dealer_score:
@@ -108,7 +107,7 @@ def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> 
         display_cards(**args)
         
         # If no one has a win message, and there's no tie, game on
-        is_game_over = (args["win_message"] is not None) or (args["tie"])
+        is_game_over = (args["win_message"] is not None)
         return is_game_over
 
 
@@ -128,7 +127,7 @@ def player_hits(player_score, player_card, dealer_score, dealer_card, deck):
         player_score = sum(card_value(card) for card in player_card)
     #if player busts over 21, player losed and new game starts without allowing dealer to select cards.
     if player_score > 21:
-        display_cards(player_card, player_score, dealer_card, dealer_score, "Dealer won.", False, deck)
+        display_cards(player_card, player_score, dealer_card, dealer_score, False, deck)
         enter_more(deck)
     #Dealers turn
     # NOTE: In casino play, dealers don't take turns until the players are done
@@ -155,32 +154,36 @@ def player_stays(ps, ds, pc, dc, trigger, deck):
     while trigger and ds >= 17:
 
         if ds > 21:
-            display_cards(pc, ps, dc, ds, "-*PLAYER WON!*", False, deck)
+            display_cards(pc, ps, dc, ds, "-*PLAYER WON!*", deck)
 
         elif ps > ds:
-            display_cards(pc, ps, dc, ds, "-*PLAYER WON!*", False, deck)
+            display_cards(pc, ps, dc, ds, "-*PLAYER WON!*", deck)
 
         elif ds > ps:
-            display_cards(pc, ps, dc, ds, "Dealer won.", False, deck)
+            display_cards(pc, ps, dc, ds, "Dealer won.", deck)
 
         elif ds == ps:
-            display_cards(pc, ps, dc, ds, "", True, deck)
+            display_cards(pc, ps, dc, ds, "-*You tied*-", deck)
         else:
             continue
         enter_more(deck)
 
 #display scoreboard.
-def display_cards(player_cards, player_score, dealer_cards, dealer_score, win_message, tie, deck):
-    if tie:
-        print(f"Players cards: {player_cards}\n")
-        print(f"Dealers cards: {dealer_cards}")
-        print(f"\n\n ---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} -*You tied*-  ***---\n")
-        enter_more(deck)
+def display_cards(player_cards, player_score, dealer_cards, dealer_score, win_message, deck):
+    # No need for a special case for a tie
+    # This is a display, it's more of just an "outcome" message
+    print(f"Players cards: {player_cards}\n")
+    print(f"Dealers cards: {dealer_cards}")
+    print(f"\n---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} {win_message}  ***---\n")
 
-    else:
-        print(f"Players cards: {player_cards}\n")
-        print(f"Dealers cards: {dealer_cards}")
-        print(f"\n---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} {win_message}  ***---\n")
+    # TODO: Remove game restart from display functionality
+    # This is really confusing design. Calling a display function shouldn't have a chance to restart the game
+    # There is a principle called "Side effects"
+    # A simple explanation is that a function should do 1 focused thing.
+    # If it changes anything outside of just doing that 1 thing, it's a side effect
+    # Try to minimize side effects.
+    # The reason is that when another programmer comes along, and wants to display cards,
+    # And they see a function "display_cards()", they shouldn't have to worry if calling it can restart the game
     if win_message:
         enter_more(deck)
 
