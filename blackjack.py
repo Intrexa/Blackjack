@@ -66,6 +66,9 @@ def get_new_shuffled_deck() -> list[tuple[str, str]]:
 
 def main(player_score, player_card, dealer_score, dealer_card, deck):
 
+    has_player_stayed = False # Merging some code paths on the way the dealer plays
+    # This will also simplify checking wins for the dealer
+    
     while dealer_score < 17 or player_score < 21 :
             #initialize and shuffle deck
         if len(deck) < 9: #Shuffle when there are 6 or less cards left - may cause error if more than 8 cards are
@@ -88,16 +91,29 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
         if game_state["is_game_over"]:
             # method of restarting will change in the future
             enter_more(deck)
-        choice = input("Another card sir/madame? 'h' to Hit it, 'p' to quit it: \n").lower()
-        #If player hits, go to player_hits function
-        if choice == "h":
-            player_hits(player_score, player_card, dealer_score, dealer_card, deck)
-        #If player stays, go to player_stays function
-        elif choice == "p":
-            player_stays(player_score, dealer_score, player_card, dealer_card, True, deck)
-        else: #self explanatory
-            print("Invalid choice. Please try again.")
-            continue
+
+        # Check if player has already stayed
+        # If they have, don't ask them again
+        # Otherwise, present choice
+        if not has_player_stayed:
+            choice = input("Another card sir/madame? 'h' to Hit it, 'p' to quit it: \n").lower()
+            #If player hits, go to player_hits function
+            if choice == "h":
+                player_hits(player_card, deck)
+                game_state = evaluate_state(player_card,player_score,dealer_card,dealer_score,deck)
+                if game_state["is_game_over"]:
+                    enter_more(deck) # Restarts game
+            elif choice == "p":
+                has_player_stayed = True
+            else: #self explanatory
+                print("Invalid choice. Please try again.")
+
+        # No matter what, dealer gets a play
+        # dealer score in while loop handles calling this over and over until done
+        # No need to do game over check or display yet, it will happen at start of next loop
+        # Which is a bit of a defect, but will refactor that later
+        player_stays(dealer_card, deck)
+            
 
 # Evaluate game state
 # TODO: game_state should be a class
@@ -144,56 +160,20 @@ def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> 
 
 
 #get player card when 'hit'
-def player_hits(player_score, player_card, dealer_score, dealer_card, deck):
+def player_hits(player_card, deck):
     new_card = deck.pop()
     player_card.append(new_card)
-    player_score = evaluate_hand(player_card)
-    #if player busts over 21, player lost and new game starts without allowing dealer to select cards.
-    if player_score > 21:
-        display_cards_and_maybe_start_over(player_card, player_score, dealer_card, dealer_score, "Dealer won.", deck)
-        # BUG: The above function will call "enter_more()", because there is a win message
-        # Now, we call it again. The below will never actually be called, the game is restarting from the above
-        # This is why we don't have side effects in code, it makes it really hard to spot these bugs
-        # When I renamed your old display function, it made it really obvious there could be an issue here.
-        enter_more(deck)
-    #Dealers turn
-    # NOTE: In casino play, dealers don't take turns until the players are done
-    # We are going to refactor this further
-    player_stays(player_score, dealer_score, player_card, dealer_card, False, deck)
+    # We don't need to update scores, take dealers turn, or try to restart game
+    # We removed side effects from evaluating the game state, and displaying it
+    # So we can just keep calling those functions without any risk
 
 #Dealer/computer card selection
-def player_stays(ps, ds, pc, dc, trigger, deck):
-    while ds < 17:
-        new_card = deck.pop()
-        dc.append(new_card)
-        ds = evaluate_hand(dc)
-        #when trigger is True, this means Player is passed and computer is free to pull cards sequentially til finished
-        # TODO: Remove recursion
-        # main() is a bit overloaded, and the below is confusing
-        # main really is "Take a turn"
-        # So it should be called "take_turn"
-        # when you have a line of code like "main(0, [], 0, [], [])"
-        # You're creating a new game, then telling main() to take a turn in that new game
-        # This should be split out into seperate functions and made more clear
-        if trigger == False and ds < 22:
-            main(ps, pc, ds, dc, deck)
-    #when Player is finished and computer is finished evaluate for win, lose or tie, invoke scoreboard display
-    while trigger and ds >= 17:
+def player_stays(dc, deck):
+    # wins are checked in evaluate_game_state
+    # that's where the dealer stops taking cards, the game will end there
+    new_card = deck.pop()
+    dc.append(new_card)
 
-        if ds > 21:
-            display_cards_and_maybe_start_over(pc, ps, dc, ds, "-*PLAYER WON!*", deck)
-
-        elif ps > ds:
-            display_cards_and_maybe_start_over(pc, ps, dc, ds, "-*PLAYER WON!*", deck)
-
-        elif ds > ps:
-            display_cards_and_maybe_start_over(pc, ps, dc, ds, "Dealer won.", deck)
-
-        elif ds == ps:
-            display_cards_and_maybe_start_over(pc, ps, dc, ds, "-*You tied*-", deck)
-        else:
-            continue
-        enter_more(deck)
 
 #display scoreboard.
 def display_cards_and_maybe_start_over(player_cards, player_score, dealer_cards, dealer_score, win_message, deck):
