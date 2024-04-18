@@ -65,8 +65,6 @@ def get_new_shuffled_deck() -> list[tuple[str, str]]:
     return deck
 
 def main(player_score, player_card, dealer_score, dealer_card, deck):
-    card_list = []
-    card_categories = []
 
     while dealer_score < 17 or player_score < 21 :
             #initialize and shuffle deck
@@ -82,11 +80,15 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
         player_score = evaluate_hand(player_card)
         dealer_score = evaluate_hand(dealer_card)
 
-        # We don't really need is_game_over, because of so many exit points in the functions
-        # But we will end up making use of is_game_over
-        is_game_over = evaluate_state(player_card,player_score,dealer_card,dealer_score,deck)
-        if not is_game_over:
-            choice = input("Another card sir/madame? 'h' to Hit it, 'p' to quit it: \n").lower()
+
+        game_state = evaluate_state(player_card,player_score,dealer_card,dealer_score,deck)
+        display_game_state(**game_state)
+
+        # If the game is over, restart the game
+        if game_state["is_game_over"]:
+            # method of restarting will change in the future
+            enter_more(deck)
+        choice = input("Another card sir/madame? 'h' to Hit it, 'p' to quit it: \n").lower()
         #If player hits, go to player_hits function
         if choice == "h":
             player_hits(player_score, player_card, dealer_score, dealer_card, deck)
@@ -97,55 +99,50 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
             print("Invalid choice. Please try again.")
             continue
 
-# Evaluate game state for game over
+# Evaluate game state
 # TODO: This function is still overloaded, should not be displaying state as well
 # TODO: Refactor display to be seperate function
-def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> bool:
+# TODO: game_state should be a class
+def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> dict[str,any]:
         """
-        Evaluate Game State
+        Evaluate Game State. Returns dict of evaluated state
 
         Returns:
-            bool: Is the game over
+            dict[str,yolo]: 
         """
-        is_game_over = False
         #evaluate cards for win/lose or tie, Some automation is here - may seem line error during play but NOT.
 
         # arguments to pass to display_cards()
         # These will get set after game state is evaluated
         # TODO: Game should be a class to prevent so many args being passed around
-        args = {
+        game_state = {
             "player_cards":player_cards,
             "player_score":player_score,
             "dealer_cards":dealer_cards,
             "dealer_score":dealer_score,
             "win_message":None, #No default win message
-            "deck":deck
+            "deck":deck,
+            "is_game_over":False,
+            "player_stays":False
         }
         if dealer_score > 21:
-            args["win_message"] = "-*PLAYER WON!*-"
+            game_state["win_message"] = "-*PLAYER WON!*-"
+            # BUG: Currently tied, but the game shouldn't be over until the player decides to stay
+            # NOTE: In casino play, if the player and dealer both bust, just the player loses
+            # I think this is covered elsewhere, I'm still untangling things
         elif dealer_score == player_score and player_score >= 17:
-            args["win_message"] = "-*You tied*-"
+            game_state["win_message"] = "-*You tied*-"
         elif dealer_score in range(17, 21+1) and player_score in range(17, 21+1) and player_score > dealer_score:
-            args["win_message"] = "-*PLAYER WON!*-"
+            game_state["win_message"] = "-*PLAYER WON!*-"
         elif dealer_score in range(17, 21+1) and player_score in range(18, 21+1) and player_score < dealer_score:
-            args["win_message"] = "Dealer won"
-        elif dealer_score < 17 and player_score in range(20, 21+1):
-            # The below was super tricky, I didn't notice this was a seperate function at first
-            # Long lists of conditions are hard enough, but you kind of snuck a different function in the middle
-            # This makes it hard to realize what's happening
-            # Try to either not do this, or make it obvious
-            # It's also really sneaky that a new game can start in this function
-            player_stays(player_score, dealer_score, player_cards, dealer_cards, True, deck)
+            game_state["win_message"] = "Dealer won"
         else:
             # Game not over, still players turn
-            pass # Really we could move this clause, pass for now
-        
-        # dictionary unpacking as arguments to the function
-        display_cards(**args)
+            pass # Really we could remove this clause, pass for now
         
         # If no one has a win message, and there's no tie, game on
-        is_game_over = (args["win_message"] is not None)
-        return is_game_over
+        game_state["is_game_over"] = (game_state["win_message"] is not None)
+        return game_state
 
 
 #get player card when 'hit'
@@ -155,7 +152,7 @@ def player_hits(player_score, player_card, dealer_score, dealer_card, deck):
     player_score = evaluate_hand(player_card)
     #if player busts over 21, player lost and new game starts without allowing dealer to select cards.
     if player_score > 21:
-        display_cards(player_card, player_score, dealer_card, dealer_score, "Dealer won.", deck)
+        display_cards_and_maybe_start_over(player_card, player_score, dealer_card, dealer_score, "Dealer won.", deck)
         enter_more(deck)
     #Dealers turn
     # NOTE: In casino play, dealers don't take turns until the players are done
@@ -182,22 +179,22 @@ def player_stays(ps, ds, pc, dc, trigger, deck):
     while trigger and ds >= 17:
 
         if ds > 21:
-            display_cards(pc, ps, dc, ds, "-*PLAYER WON!*", deck)
+            display_cards_and_maybe_start_over(pc, ps, dc, ds, "-*PLAYER WON!*", deck)
 
         elif ps > ds:
-            display_cards(pc, ps, dc, ds, "-*PLAYER WON!*", deck)
+            display_cards_and_maybe_start_over(pc, ps, dc, ds, "-*PLAYER WON!*", deck)
 
         elif ds > ps:
-            display_cards(pc, ps, dc, ds, "Dealer won.", deck)
+            display_cards_and_maybe_start_over(pc, ps, dc, ds, "Dealer won.", deck)
 
         elif ds == ps:
-            display_cards(pc, ps, dc, ds, "-*You tied*-", deck)
+            display_cards_and_maybe_start_over(pc, ps, dc, ds, "-*You tied*-", deck)
         else:
             continue
         enter_more(deck)
 
 #display scoreboard.
-def display_cards(player_cards, player_score, dealer_cards, dealer_score, win_message, deck):
+def display_cards_and_maybe_start_over(player_cards, player_score, dealer_cards, dealer_score, win_message, deck):
     # No need for a special case for a tie
     # This is a display, it's more of just an "outcome" message
     print(f"Players cards: {player_cards}\n")
@@ -214,6 +211,24 @@ def display_cards(player_cards, player_score, dealer_cards, dealer_score, win_me
     # And they see a function "display_cards()", they shouldn't have to worry if calling it can restart the game
     if win_message:
         enter_more(deck)
+
+# display scoreboard and just the scoreboard.
+# the "**_" is to let me still use dictionary unpacking
+# **_ takes the rest of the dict arguments not named as parameters
+# This is temporary, I will move the game_state to a seperate class in the future
+def display_game_state(player_cards, player_score, dealer_cards, dealer_score, win_message, **_):
+    """
+    Render game state, and do not end the game
+
+    Returns:
+        None
+    """
+
+    print(f"Players cards: {player_cards}\n")
+    print(f"Dealers cards: {dealer_cards}")
+    print(f"\n---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} {(win_message or '')}  ***---\n")
+
+
 
 #Start new round
 # BUG: This should be a loop, not recursion
