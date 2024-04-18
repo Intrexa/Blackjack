@@ -1,11 +1,5 @@
 import random
 
-dealer_score = 0
-player_score = 0
-player_card = []
-dealer_card = []
-choice = ""
-one = ('1', 'ace')
 
 def card_value(card) -> int:
     """
@@ -112,7 +106,7 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
         # dealer score in while loop handles calling this over and over until done
         # No need to do game over check or display yet, it will happen at start of next loop
         # Which is a bit of a defect, but will refactor that later
-        player_stays(dealer_card, deck)
+        dealer_turn(dealer_card, deck)
             
 
 # Evaluate game state
@@ -163,36 +157,13 @@ def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> 
 def player_hits(player_card, deck):
     new_card = deck.pop()
     player_card.append(new_card)
-    # We don't need to update scores, take dealers turn, or try to restart game
-    # We removed side effects from evaluating the game state, and displaying it
-    # So we can just keep calling those functions without any risk
 
 #Dealer/computer card selection
-def player_stays(dc, deck):
-    # wins are checked in evaluate_game_state
-    # that's where the dealer stops taking cards, the game will end there
+def dealer_turn(dc, deck):
     new_card = deck.pop()
     dc.append(new_card)
 
 
-#display scoreboard.
-def display_cards_and_maybe_start_over(player_cards, player_score, dealer_cards, dealer_score, win_message, deck):
-    # No need for a special case for a tie
-    # This is a display, it's more of just an "outcome" message
-    print(f"Players cards: {player_cards}\n")
-    print(f"Dealers cards: {dealer_cards}")
-    print(f"\n---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} {(win_message or '')}  ***---\n")
-
-    # TODO: Remove game restart from display functionality
-    # This is really confusing design. Calling a display function shouldn't have a chance to restart the game
-    # There is a principle called "Side effects"
-    # A simple explanation is that a function should do 1 focused thing.
-    # If it changes anything outside of just doing that 1 thing, it's a side effect
-    # Try to minimize side effects.
-    # The reason is that when another programmer comes along, and wants to display cards,
-    # And they see a function "display_cards()", they shouldn't have to worry if calling it can restart the game
-    if win_message:
-        enter_more(deck)
 
 # display scoreboard and just the scoreboard.
 # the "**_" is to let me still use dictionary unpacking
