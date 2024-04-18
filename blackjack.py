@@ -48,7 +48,21 @@ def evaluate_hand(cards: list) -> int:
     
     return hand_value
 
+def get_new_shuffled_deck() -> list[tuple[str, str]]:
+    """
+    Gets a brand new, freshly shuffled deck to play with
+    Has all 52 cards. Jokers removed.
 
+    Return:
+        list[tuple[str, str]]: (face, suit)
+    """
+
+    card_categories = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
+    cards_list = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
+    deck = [(card, category) for category in card_categories for card in cards_list]
+    random.shuffle(deck)
+
+    return deck
 
 def main(player_score, player_card, dealer_score, dealer_card, deck):
     card_list = []
@@ -59,11 +73,8 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
         if len(deck) < 9: #Shuffle when there are 6 or less cards left - may cause error if more than 8 cards are
             # used at the end of the deck (rare)
             print(f"{len(deck)} cards in deck, shuffling...")
-            card_categories = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
-            cards_list = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
-            deck = [(card, category) for category in card_categories for card in cards_list]
-            random.shuffle(deck)
-            #check if first round and deal 2 cards to each player.
+            deck = get_new_shuffled_deck()
+        #check if first round and deal 2 cards to each player.
         if player_score == 0:
             player_card = [deck.pop(), deck.pop()]
             dealer_card = [deck.pop(), deck.pop()]
