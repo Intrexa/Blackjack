@@ -107,10 +107,6 @@ def evaluate_state(player_cards,player_score,dealer_cards,dealer_score,deck) -> 
             "player_score":player_score,
             "dealer_cards":dealer_cards,
             "dealer_score":dealer_score,
-            # BUG: I introduced this bug
-            # display isn't playing nice with "None"
-            # Exaple:
-            # ---*** Your scores are: Dealer: 9 --***-- Player: 9 None  ***---
             "win_message":None, #No default win message
             "deck":deck
         }
