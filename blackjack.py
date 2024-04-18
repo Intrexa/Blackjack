@@ -195,7 +195,7 @@ def display_cards(player_cards, player_score, dealer_cards, dealer_score, win_me
     # This is a display, it's more of just an "outcome" message
     print(f"Players cards: {player_cards}\n")
     print(f"Dealers cards: {dealer_cards}")
-    print(f"\n---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} {win_message}  ***---\n")
+    print(f"\n---*** Your scores are: Dealer: {dealer_score} --***-- Player: {player_score} {(win_message or '')}  ***---\n")
 
     # TODO: Remove game restart from display functionality
     # This is really confusing design. Calling a display function shouldn't have a chance to restart the game
