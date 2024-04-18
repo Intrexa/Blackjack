@@ -127,7 +127,7 @@ def player_hits(player_score, player_card, dealer_score, dealer_card, deck):
         player_score = sum(card_value(card) for card in player_card)
     #if player busts over 21, player losed and new game starts without allowing dealer to select cards.
     if player_score > 21:
-        display_cards(player_card, player_score, dealer_card, dealer_score, False, deck)
+        display_cards(player_card, player_score, dealer_card, dealer_score, "Dealer won.", deck)
         enter_more(deck)
     #Dealers turn
     # NOTE: In casino play, dealers don't take turns until the players are done
