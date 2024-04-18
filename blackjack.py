@@ -58,22 +58,38 @@ def get_new_shuffled_deck() -> list[tuple[str, str]]:
 
     return deck
 
-def main(player_score, player_card, dealer_score, dealer_card, deck):
+def main():
+    deck = [] # initialize deck list
+    play_again = True # initialize loop
+    while play_again: # Keep playing while the player wants to play
+        play_round(deck) # Converting to a loop simplifies logic about restarting
+        play_again = ask_to_play_again() # And removes potential stack overflow
 
+
+            
+def play_round(deck):
+    """
+    This is the game. Play a round with a deck.
+
+    Returns:
+        None
+    """
     has_player_stayed = False # Merging some code paths on the way the dealer plays
     # This will also simplify checking wins for the dealer
+
+    # Initialize Deck
+    if len(deck) < 9:
+        print(f"{len(deck)} cards in deck, shuffling...")
+        deck = get_new_shuffled_deck()
+
+    player_card = [deck.pop(), deck.pop()]
+    dealer_card = [deck.pop(), deck.pop()]
     
-    while dealer_score < 17 or player_score < 21 :
-            #initialize and shuffle deck
-        if len(deck) < 9: #Shuffle when there are 6 or less cards left - may cause error if more than 8 cards are
-            # used at the end of the deck (rare)
+    while True: # Keep playing until a winner is found
+        if len(deck) < 9: # Grab a new deck
             print(f"{len(deck)} cards in deck, shuffling...")
             deck = get_new_shuffled_deck()
-        #check if first round and deal 2 cards to each player.
-        if player_score == 0:
-            player_card = [deck.pop(), deck.pop()]
-            dealer_card = [deck.pop(), deck.pop()]
-        
+         
         player_score = evaluate_hand(player_card)
         dealer_score = evaluate_hand(dealer_card)
 
@@ -83,8 +99,7 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
 
         # If the game is over, restart the game
         if game_state["is_game_over"]:
-            # method of restarting will change in the future
-            enter_more(deck)
+            break # Stop playing, exit loop
 
         # Check if player has already stayed
         # If they have, don't ask them again
@@ -96,7 +111,7 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
                 player_hits(player_card, deck)
                 game_state = evaluate_state(player_card,player_score,dealer_card,dealer_score,deck)
                 if game_state["is_game_over"]:
-                    enter_more(deck) # Restarts game
+                    break # Restarts game
             elif choice == "p":
                 has_player_stayed = True
             else: #self explanatory
@@ -107,7 +122,7 @@ def main(player_score, player_card, dealer_score, dealer_card, deck):
         # No need to do game over check or display yet, it will happen at start of next loop
         # Which is a bit of a defect, but will refactor that later
         dealer_turn(dealer_card, deck)
-            
+
 
 # Evaluate game state
 # TODO: game_state should be a class
@@ -183,16 +198,15 @@ def display_game_state(player_cards, player_score, dealer_cards, dealer_score, w
 
 
 
-#Start new round
-# BUG: This should be a loop, not recursion
-# This can overflow the stack + crash if player plays enough rounds
-# This function has way too many entry points
-# When debugging/troubleshooting, it's hard to tell when/where/why it's getting called
-def enter_more(d_count):
-    go_again = input("0 to quit or Enter to start ") # Keep as string, avoids TypeErrors.
-    if go_again == "0": # anything other than "0" will return False, no errors.
-        exit()
-    else:
-        main(0, [], 0, [], d_count)
+# Check if player wants to play again
+def ask_to_play_again():
+    """
+    Ask player if they want to play again
 
-main(0, [], 0, [], [])
+    Returns:
+        bool: True if they want more
+    """
+    go_again = input("0 to quit or Enter to start ") # Keep as string, avoids TypeErrors.
+    return not (go_again == "0") # anything other than "0" will return False, no errors.
+
+main()
